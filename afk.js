@@ -7,9 +7,9 @@ const client = new Client({
 });
 
 // ==================== PENGATURAN UTAMA ====================
-const TOKEN = "MTUyMTc5Mzc0MjY5OTM2ODQ5MQ.GFmBYt.FRrNf3sf5GKG3Lv-2Yl1GWRg3186QaxwK7uNNg"; // Token akun Anda
-const GUILD_ID = "1492249698596290794";   // ID Server / Guild Discord
-const CHANNEL_ID = "1492249697744715787";     // ID Voice Channel tujuan
+const TOKEN = ""; // Token akun Anda
+const GUILD_ID = "";   // ID Server / Guild Discord
+const CHANNEL_ID = "";     // ID Voice Channel tujuan
 // ==========================================================
 
 console.log("[LOG] Memulai script... Mencoba login ke Discord...");
