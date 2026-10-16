@@ -16,4 +16,4 @@ RUN npm install --omit=dev
 COPY . .
 
 # Menjalankan script musik via pm2-runtime agar standby 24 jam penuh
-CMD ["pm2-runtime", "start", "afk.js"]
+CMD ["pm2-runtime", "start", "index.js"]
