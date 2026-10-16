@@ -7,9 +7,9 @@ const client = new Client({
 });
 
 // ==================== PENGATURAN UTAMA ====================
-const TOKEN = ""; // Token akun Anda
-const GUILD_ID = "";   // ID Server / Guild Discord
-const CHANNEL_ID = "";     // ID Voice Channel tujuan
+const TOKEN = "MTU1MDY1NTE4Mjg4OTU0OTkyNw.GF1UMk.vB2h39cecQi2mopO9uOLXOuOhI-XGTHgD0heYA"; // Token akun Anda
+const GUILD_ID = "1492249697744715787";   // ID Server / Guild Discord
+const CHANNEL_ID = "1492249698596290794";     // ID Voice Channel tujuan
 // ==========================================================
 
 console.log("[LOG] Memulai script... Mencoba login ke Discord...");
@@ -41,7 +41,7 @@ async function connectToVoice() {
             guildId: GUILD_ID,
             adapterCreator: channel.guild.voiceAdapterCreator,
             selfMute: true,  // Otomatis bisu (mute)
-            selfDeaf: true   // Otomatis tuli (deafen) agar hemat kuota Termux
+            selfDeaf: false   // Otomatis tuli (deafen) agar hemat kuota Termux
         });
 
         // Memantau proses jabat tangan (handshake) jaringan audio
