@@ -1,78 +1,89 @@
-const { Client } = require('discord.js-selfbot-v13');
-const { joinVoiceChannel, VoiceConnectionStatus, entersState } = require('@discordjs/voice');
+const { Client, GatewayIntentBits } = require('passport-discord'); // Menggunakan Client bawaan discord.js
+const { Client: DiscordClient, IntentsBitField } = require('discord.js');
+const { DisTube } = require('distube');
+const { YouTubePlugin } = require('@distube/youtube');
+const { SpotifyPlugin } = require('@distube/spotify');
+const { AppleMusicPlugin } = require('@distube/apple-music');
 
-const client = new Client({
-    checkUpdate: false,
-    patchVoice: true // Mengatasi enkripsi patch suara baru Discord
+const client = new DiscordClient({
+  intents: [
+    IntentsBitField.Flags.Guilds,
+    IntentsBitField.Flags.GuildMessages,
+    IntentsBitField.Flags.GuildVoiceStates,
+    IntentsBitField.Flags.MessageContent
+  ]
 });
 
-// ==================== PENGATURAN UTAMA ====================
-const TOKEN = "MTU1MDY1NTE4Mjg4OTU0OTkyNw.GF1UMk.vB2h39cecQi2mopO9uOLXOuOhI-XGTHgD0heYA"; // Token akun Anda
-const GUILD_ID = "1492249697744715787";   // ID Server / Guild Discord
-const CHANNEL_ID = "1492249698596290794";     // ID Voice Channel tujuan
-// ==========================================================
-
-console.log("[LOG] Memulai script... Mencoba login ke Discord...");
-
-client.on('ready', async () => {
-    console.log(`=================================`);
-    console.log(`[SUKSES] Berhasil login sebagai: ${client.user.tag}`);
-    console.log(`=================================`);
-
-    // Memanggil fungsi untuk masuk ke Voice Channel secara paksa
-    connectToVoice();
+// Inisialisasi DisTube dengan plugin YouTube, Spotify, dan Apple Music
+const distube = new DisTube(client, {
+  leaveOnEmpty: false,
+  leaveOnFinish: false,
+  emitNewGuildOwnerOnly: false,
+  plugins: [
+    new YouTubePlugin(),
+    new SpotifyPlugin({ emitEventsAfterQueue: true }),
+    new AppleMusicPlugin()
+  ]
 });
 
-async function connectToVoice() {
+const PREFIX = '!'; // Prefiks perintah bot kamu
+
+client.on('ready', () => {
+  console.log(`Bot Musik Resmi \${client.user.tag} aktif 24 jam di Railway!`);
+});
+
+client.on('messageCreate', async (message) => {
+  if (message.author.bot || !message.guild || !message.content.startsWith(PREFIX)) return;
+
+  const args = message.content.slice(PREFIX.length).trim().split(/ +/g);
+  const command = args.shift().toLowerCase();
+
+  // Perintah memutar musik (!play <judul/link youtube/spotify/apple music>)
+  if (command === 'play') {
+    const voiceChannel = message.member.voice.channel;
+    if (!voiceChannel) return message.reply('Kamu harus masuk ke voice channel terlebih dahulu!');
+
+    const query = args.join(' ');
+    if (!query) return message.reply('Masukkan judul lagu atau link (YouTube/Spotify/Apple Music)!');
+
     try {
-        console.log(`[LOG] Mencoba masuk secara paksa ke VC dengan ID: ${CHANNEL_ID}`);
-
-        // Mengambil data channel dari cache Discord
-        const channel = client.channels.cache.get(CHANNEL_ID);
-        
-        if (!channel) {
-            console.error("[CRITICAL ERROR] ID Voice Channel tidak ditemukan! Pastikan ID sudah benar dan akun Anda sudah masuk ke server tersebut.");
-            return;
-        }
-
-        // Melakukan koneksi ke Voice Channel
-        const connection = joinVoiceChannel({
-            channelId: CHANNEL_ID,
-            guildId: GUILD_ID,
-            adapterCreator: channel.guild.voiceAdapterCreator,
-            selfMute: true,  // Otomatis bisu (mute)
-            selfDeaf: false   // Otomatis tuli (deafen) agar hemat kuota Termux
-        });
-
-        // Memantau proses jabat tangan (handshake) jaringan audio
-        connection.on(VoiceConnectionStatus.Connecting, () => {
-            console.log('[LOG] Sedang menghubungkan ke server suara Discord...');
-        });
-
-        connection.on(VoiceConnectionStatus.Ready, () => {
-            console.log('=============== BERHASIL ===============');
-            console.log(' Akun Anda SUDAH MASUK ke Voice Channel!');
-            console.log(' Sekarang akun akan stand by AFK selamanya.');
-            console.log('========================================');
-        });
-
-        // Menunggu status Ready dalam waktu maksimal 20 detik
-        await entersState(connection, VoiceConnectionStatus.Ready, 20000);
-
-        // Fitur Anti-Kick: Jika ditendang atau terputus, otomatis masuk lagi dalam 5 detik
-        connection.on('disconnect', () => {
-            console.log("[WARNING] Terputus dari VC! Mencoba masuk kembali dalam 5 detik...");
-            setTimeout(() => connectToVoice(), 5000);
-        });
-
-    } catch (error) {
-        console.error("[ERROR KONEKSI AUDIO]:", error);
-        console.log("Mencoba ulang koneksi dalam 10 detik...");
-        setTimeout(() => connectToVoice(), 10000);
+      await distube.play(voiceChannel, query, {
+        textChannel: message.channel,
+        member: message.member,
+        message
+      });
+      message.reply(`🔍 Mencari dan memutar: **\${query}**`);
+    } catch (err) {
+      console.error(err);
+      message.reply('Terjadi kesalahan saat mencoba memutar lagu.');
     }
-}
+  }
 
-// Proses login
-client.login(TOKEN).catch(err => {
-    console.error("[ERROR LOGIN] Gagal masuk ke akun Discord:", err.message);
+  // Perintah skip lagu (!skip)
+  if (command === 'skip') {
+    try {
+      const queue = distube.getQueue(message);
+      if (!queue) return message.reply('Tidak ada lagu yang sedang diputar.');
+      await distube.skip(message);
+      message.reply('⏭️ Lagu dilewati!');
+    } catch (err) {
+      message.reply('Tidak ada lagu berikutnya di antrean.');
+    }
+  }
+
+  // Perintah berhenti (!stop)
+  if (command === 'stop') {
+    const queue = distube.getQueue(message);
+    if (!queue) return message.reply('Tidak ada musik yang sedang aktif.');
+    distube.stop(message);
+    message.reply('🛑 Musik dihentikan dan antrean dihapus.');
+  }
 });
+
+// Menangkap event saat lagu mulai diputar
+distube.on('playSong', (queue, song) => {
+  queue.textChannel.send(`🎶 Sekarang memutar: **\${song.name}** - \`${song.formattedDuration}\``);
+});
+
+// Menangkap token bot aman dari Environment Variable Railway
+client.login(process.env.DISCORD_TOKEN);
